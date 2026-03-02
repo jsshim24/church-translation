@@ -1,6 +1,6 @@
-# Korean → English Live Sermon Translator
+# Korean → English Live Church Translation
 
-Real-time Korean-to-English translation for live church sermons. Captures audio from a soundboard (or any input device), transcribes with Google Cloud Speech-to-Text V2 (Chirp 3), and translates each phrase with Claude.
+Real-time Korean-to-English translation for a live church context. Captures audio any input device, transcribes with Google Cloud Speech-to-Text V2 (Chirp 3), and translates each phrase with Claude.
 
 ## How It Works
 
@@ -30,8 +30,8 @@ Real-time Korean-to-English translation for live church sermons. Captures audio 
 ### Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/sermon-translator.git
-cd sermon-translator
+git clone https://github.com/jsshim24/church-translation.git
+cd church-translation
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -81,10 +81,6 @@ python translate.py --fast-endpointing
 
 Press **Ctrl+C** to stop.
 
-## Audio Setup
-
-This is designed for a Mac Mini connected to a church soundboard via a USB audio interface. Any audio input device that shows up in your system works — USB interfaces, built-in mic, virtual audio devices, etc.
-
 ## License
 
-MIT
+Unlicense
