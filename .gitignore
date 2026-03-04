@@ -13,6 +13,3 @@ venv/
 
 # Claude Code
 .claude/
-
-# Logs & transcripts
-*.txt
