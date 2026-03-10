@@ -1,0 +1,22 @@
+# Credentials & secrets
+.env
+
+# Google JSON credentials
+project-426e4871-8d26-4a6d-874-0cbfb1464b15.json
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/
+
+# In-progress files
+soniox_realtime_new.py
+soniox_realtime.py
+test_soniox.py
+llms-full.txt
