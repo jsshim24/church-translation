@@ -122,13 +122,13 @@ def stream_audio(device_index: int, ws, stop_event: threading.Event) -> None:
 
 
 # Convert tokens into a readable transcript.
-def render_tokens(final_tokens: list[dict], non_final_tokens: list[dict]) -> str:
+def render_tokens(final_tokens: list[dict]) -> str:
     text_parts: list[str] = []
     current_speaker: Optional[str] = None
     current_language: Optional[str] = None
 
     # Process all tokens in order.
-    for token in final_tokens + non_final_tokens:
+    for token in final_tokens:
         text = token["text"]
         if text == "<end>":
             continue
@@ -191,7 +191,6 @@ def run_session(api_key: str, device_index: int) -> None:
                     break
 
                 # Parse tokens from current response.
-                non_final_tokens: list[dict] = []
                 for token in res.get("tokens", []):
                     if token.get("text"):
                         # Track translation tokens separately (not printed,
@@ -202,22 +201,16 @@ def run_session(api_key: str, device_index: int) -> None:
                             continue
                         if token.get("is_final"):
                             final_tokens.append(token)
-                        # else:
-                        #     non_final_tokens.append(token)
 
                 # Print buffered transcription tokens when a translation arrives.
                 # (Change to `len(final_tokens) == prev_final_count` to print immediately.)
                 if len(final_translation_tokens) == prev_translation_count:
                     continue
 
-                # Print only the new final tokens since last print.
-                # (Replace with the two lines below to restore full-reprint behavior:)
-                #   text = render_tokens(final_tokens, non_final_tokens)
-                #   print(text)
                 new_tokens = final_tokens[prev_final_count:]
                 prev_final_count = len(final_tokens)
                 prev_translation_count = len(final_translation_tokens)
-                text = render_tokens(new_tokens, non_final_tokens)
+                text = render_tokens(new_tokens)
                 print(text)
 
                 # Session finished.
