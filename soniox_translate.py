@@ -6,6 +6,8 @@ import threading
 import argparse
 from typing import Optional
 
+import anthropic
+
 # Suppress noisy thread exception tracebacks on Ctrl+C.
 threading.excepthook = lambda args: None
 
@@ -18,6 +20,24 @@ SONIOX_WEBSOCKET_URL = "wss://stt-rt.soniox.com/transcribe-websocket"
 
 SAMPLE_RATE = 16000
 CHUNK_FRAMES = 1600  # 100ms at 16kHz
+
+DEFAULT_MODEL = "claude-sonnet-4-6"
+
+SYSTEM_PROMPT = (
+    "You are a live translation assistant for a Korean church sermon. "
+    "You receive a rolling context window of recent phrases; prior translations are provided as context. "
+    "Translate ONLY the latest phrase from Korean to English. "
+    "Drop Korean hesitation fillers (아, 어). "
+    "Preferred terms: 여러분 → everyone. "
+    "If input contains both English and Korean, keep the English as-is and translate the Korean portions into English, "
+    "even if the Korean repeats or paraphrases the English — always include both. "
+    "If input is entirely in English, output it unchanged. "
+    "Prefix output with the ISO 639-1 language code in brackets, e.g. [en]. "
+    "Output ONLY the translation — no commentary or notes. "
+    "Phrases may arrive as incomplete clauses. Translate only the words present — "
+    "never infer or complete missing verbs or conclusions. "
+    "If the fragment is too incomplete or garbled, output exactly: [SKIP]"
+)
 
 
 # Get Soniox STT config.
@@ -146,6 +166,9 @@ def render_tokens(final_tokens: list[dict]) -> str:
 
         # Language changed -> add a language or translation tag.
         if language is not None and language != current_language:
+            # Add a space before the language tag if there's preceding text.
+            if text_parts and not text_parts[-1].endswith(" "):
+                text_parts.append(" ")
             current_language = language
             prefix = "[Translation] " if is_translation else ""
             text_parts.append(f"{prefix}[{current_language}] ")
@@ -156,8 +179,27 @@ def render_tokens(final_tokens: list[dict]) -> str:
     return "".join(text_parts)
 
 
-def run_session(api_key: str, device_index: int) -> None:
+def translate_phrase(client: anthropic.Anthropic, korean_text: str,
+                     context: list[tuple[str, str]], model: str = DEFAULT_MODEL) -> str:
+    messages = []
+    for speaker, translation in context:
+        messages.append({"role": "user", "content": speaker})
+        messages.append({"role": "assistant", "content": translation})
+    messages.append({"role": "user", "content": korean_text})
+
+    response = client.messages.create(
+        model=model,
+        max_tokens=1024,
+        system=SYSTEM_PROMPT,
+        messages=messages,
+    )
+    return response.content[0].text.strip()
+
+
+def run_session(api_key: str, device_index: int, anthropic_api_key: str) -> None:
     config = get_config(api_key)
+    client = anthropic.Anthropic(api_key=anthropic_api_key)
+    context: list[tuple[str, str]] = []
 
     print("Connecting to Soniox...")
     with connect(SONIOX_WEBSOCKET_URL) as ws:
@@ -179,6 +221,8 @@ def run_session(api_key: str, device_index: int) -> None:
         final_translation_tokens: list[dict] = []
         prev_final_count = 0
         prev_translation_count = 0
+        recent_phrases: list[str] = []
+        pending_text = ""
 
         try:
             while True:
@@ -211,7 +255,33 @@ def run_session(api_key: str, device_index: int) -> None:
                 prev_final_count = len(final_tokens)
                 prev_translation_count = len(final_translation_tokens)
                 text = render_tokens(new_tokens)
+                recent_phrases.append(text)
+                if len(recent_phrases) > 5:
+                    recent_phrases.pop(0)
+
+                # Accumulate with any previously skipped text
+                combined = (pending_text + " " + text).strip() if pending_text else text
+
+                text = f"[Transcription] {text}"
                 print(text)
+
+                try:
+                    translation = translate_phrase(client, combined, context)
+                except Exception as e:
+                    print(f"[Translation error: {e}]")
+                    continue
+
+                if translation == "[SKIP]":
+                    pending_text = combined
+                    continue
+
+                pending_text = ""
+                context.append((combined, translation))
+                if len(context) > 5:
+                    context.pop(0)
+
+                translation = f"[Translation] {translation}"                
+                print(translation)
 
                 # Session finished.
                 if res.get("finished"):
@@ -238,6 +308,10 @@ def main():
     if api_key is None:
         raise RuntimeError("Missing SONIOX_API_KEY. Set it in .env or environment.")
 
+    anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if anthropic_api_key is None:
+        raise RuntimeError("Missing ANTHROPIC_API_KEY. Set it in .env or environment.")
+
     if args.device is not None:
         device_index = args.device
         dev = sd.query_devices(device_index)
@@ -246,7 +320,7 @@ def main():
         device_index, device_name = select_audio_device()
         print(f"Using device [{device_index}]: {device_name}")
 
-    run_session(api_key, device_index)
+    run_session(api_key, device_index, anthropic_api_key)
 
 
 if __name__ == "__main__":
