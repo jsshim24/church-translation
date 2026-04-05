@@ -30,7 +30,7 @@ cp .env.example .env   # then edit .env and fill in SONIOX_API_KEY and ANTHROPIC
 ## Running
 
 ```bash
-python3 soniox_translate.py
+python3 soniox_claude.py
 ```
 
 You'll be prompted to select an audio input device, then transcription and translation begin immediately. A web caption server starts on port 8080 by default.
