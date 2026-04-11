@@ -1,6 +1,6 @@
-# Korean → English Live Church Translation
+# Live Church Sermon Translation
 
-Real-time Korean-to-English translation for church sermons using [Soniox](https://soniox.com/) real-time STT and [Claude](https://anthropic.com/) for translation, with a built-in web display for ProPresenter or any browser.
+Real-time sermon translation using [Soniox](https://soniox.com/) real-time STT and [Claude](https://anthropic.com/) for translation, with a built-in web display for ProPresenter or any browser. Supports Korean→English and English→Korean.
 
 ## Prerequisites
 
@@ -30,7 +30,11 @@ cp .env.example .env   # then edit .env and fill in SONIOX_API_KEY and ANTHROPIC
 ## Running
 
 ```bash
+# Korean → English (default)
 python3 soniox_claude.py
+
+# English → Korean
+python3 soniox_claude.py --lang en
 ```
 
 You'll be prompted to select an audio input device, then transcription and translation begin immediately. A web caption server starts on port 8080 by default.
@@ -91,6 +95,7 @@ Viewers can access:
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--lang {ko,en}` | `ko` | Source language: `ko` = Korean→English, `en` = English→Korean |
 | `--device N` | (interactive) | Audio input device index (skip selection prompt) |
 | `--port PORT` | `8080` | Web caption server port (`0` to disable) |
 | `--tunnel NAME` | — | Cloudflare tunnel name to start |

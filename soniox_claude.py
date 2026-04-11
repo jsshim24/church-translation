@@ -44,8 +44,24 @@ SYSTEM_PROMPT = (
     "If the fragment is too incomplete or garbled, output exactly: [SKIP] "
     "Short fragments that lack a verb or predicate and cannot stand alone as a meaningful sentence "
     "should be [SKIP]ped — they will be prepended to the next phrase automatically. "
-    "When quoting or referencing Bible passages, use the New Korean Revised Version (개역개정) "
-    "for Korean and the English Standard Version (ESV) for English."
+    "When quoting or referencing Bible passages, use the English Standard Version (ESV) for English."
+)
+
+SYSTEM_PROMPT_EN_TO_KO = (
+    "You are a live translation assistant for an English church sermon. "
+    "You receive a rolling context window of recent phrases; prior translations are provided as context. "
+    "Translate ONLY the latest phrase from English to Korean. "
+    "Drop English hesitation fillers (uh, um, like, you know, so, I mean). "
+    "Prefix output with the ISO 639-1 language code in brackets, e.g. [ko]. "
+    "Output ONLY the translation — no commentary or notes. "
+    "Phrases may arrive as incomplete clauses. Translate only the words present — "
+    "never infer or complete missing verbs or conclusions. "
+    "If the fragment is too incomplete or garbled, output exactly: [SKIP] "
+    "Short fragments that lack a verb or predicate and cannot stand alone as a meaningful sentence "
+    "should be [SKIP]ped — they will be prepended to the next phrase automatically. "
+    "Use natural, fluent Korean appropriate for a church setting. "
+    "Prefer formal polite speech (합쇼체/해요체) as is standard for sermon translation. "
+    "When quoting or referencing Bible passages, use the New Korean Revised Version (개역개정) for Korean."
 )
 
 # ── Web State ─────────────────────────────────────────────────────────────────
@@ -295,6 +311,39 @@ def get_config(api_key: str) -> dict:
     }
 
 
+def get_config_en_to_ko(api_key: str) -> dict:
+    return {
+        "api_key": api_key,
+        "model": "stt-rt-v4",
+        "language_hints": ["en"],
+        "language_hints_strict": True,
+        "enable_language_identification": True,
+        "enable_endpoint_detection": True,
+        "audio_format": "pcm_s16le",
+        "sample_rate": SAMPLE_RATE,
+        "num_channels": 1,
+        "translation": {
+            "type": "one_way",
+            "target_language": "ko",
+        },
+        "context": {
+            "general": [
+                {"key": "domain", "value": "Religion"},
+                {"key": "topic", "value": "English church sermon"},
+            ],
+            "text": "Live English church sermon with a pastor preaching to the congregation.",
+            "terms": [
+                "God", "Jesus", "Holy Spirit", "amen",
+            ],
+            "translation_terms": [
+                {"source": "God", "target": "하나님"},
+                {"source": "Jesus", "target": "예수님"},
+                {"source": "the Holy Spirit", "target": "성령"},
+            ],
+        },
+    }
+
+
 # List available input devices and prompt user to select one.
 def select_audio_device():
     devices = sd.query_devices()
@@ -401,7 +450,8 @@ def render_tokens(final_tokens: list[dict]) -> str:
 
 
 def translate_phrase(client: anthropic.Anthropic, korean_text: str,
-                     context: list[tuple[str, str]], model: str = DEFAULT_MODEL) -> str:
+                     context: list[tuple[str, str]], model: str = DEFAULT_MODEL,
+                     system_prompt: str = SYSTEM_PROMPT) -> str:
     messages = []
     for speaker, translation in context:
         messages.append({"role": "user", "content": speaker})
@@ -411,27 +461,35 @@ def translate_phrase(client: anthropic.Anthropic, korean_text: str,
     response = client.messages.create(
         model=model,
         max_tokens=1024,
-        system=SYSTEM_PROMPT,
+        system=system_prompt,
         messages=messages,
     )
     return response.content[0].text.strip()
 
 
-def _push_to_web(kind: str, text: str):
+def _push_to_web(kind: str, text: str, fallback_lang: str = "en"):
     """Parse [lang] prefix from text and push to web state."""
     m = re.match(r"\[([a-z]{2})\]\s*", text)
     if m:
         lang = m.group(1)
         raw_text = text[m.end():]
     else:
-        lang = "en"
+        lang = fallback_lang
         raw_text = text
     if raw_text.strip():
         _update_web_state(kind, lang, raw_text.strip())
 
 
-def run_session(api_key: str, device_index: int, anthropic_api_key: str) -> None:
-    config = get_config(api_key)
+def run_session(api_key: str, device_index: int, anthropic_api_key: str,
+                lang: str = "ko") -> None:
+    if lang == "en":
+        config = get_config_en_to_ko(api_key)
+        system_prompt = SYSTEM_PROMPT_EN_TO_KO
+        fallback_lang = "ko"
+    else:
+        config = get_config(api_key)
+        system_prompt = SYSTEM_PROMPT
+        fallback_lang = "en"
     client = anthropic.Anthropic(api_key=anthropic_api_key)
     context: list[tuple[str, str]] = []
 
@@ -500,10 +558,11 @@ def run_session(api_key: str, device_index: int, anthropic_api_key: str) -> None
                 print(text)
 
                 # Push transcription to web state
-                _push_to_web("transcription", text.removeprefix("[Transcription] "))
+                _push_to_web("transcription", text.removeprefix("[Transcription] "), fallback_lang)
 
                 try:
-                    translation = translate_phrase(client, combined, context)
+                    translation = translate_phrase(client, combined, context,
+                                                   system_prompt=system_prompt)
                 except Exception as e:
                     print(f"[Translation error: {e}]")
                     continue
@@ -521,7 +580,7 @@ def run_session(api_key: str, device_index: int, anthropic_api_key: str) -> None
                 print(translation)
 
                 # Push translation to web state
-                _push_to_web("translation", translation.removeprefix("[Translation] "))
+                _push_to_web("translation", translation.removeprefix("[Translation] "), fallback_lang)
 
                 # Session finished.
                 if res.get("finished"):
@@ -539,7 +598,9 @@ def run_session(api_key: str, device_index: int, anthropic_api_key: str) -> None
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Soniox real-time Korean→English translation from microphone")
+    parser = argparse.ArgumentParser(description="Soniox real-time sermon translation from microphone")
+    parser.add_argument("--lang", choices=["ko", "en"], default="ko",
+                        help="Source language: ko = Korean→English (default), en = English→Korean")
     parser.add_argument("--device", type=int, default=None, help="Audio input device index (skip interactive selection)")
     parser.add_argument("--port", type=int, default=8080, help="Web caption server port (default: 8080, 0 to disable)")
     parser.add_argument("--tunnel", type=str, default=None, help="Cloudflare tunnel name (e.g. church-live)")
@@ -574,7 +635,9 @@ def main():
         print(f"Cloudflare tunnel '{args.tunnel}' started → https://live.rctranslation.org")
 
     try:
-        run_session(api_key, device_index, anthropic_api_key)
+        direction = "Korean→English" if args.lang == "ko" else "English→Korean"
+        print(f"Translation mode: {direction}")
+        run_session(api_key, device_index, anthropic_api_key, lang=args.lang)
     finally:
         if tunnel_proc:
             tunnel_proc.terminate()
