@@ -39,6 +39,12 @@ const waitingResponse = () => new Response(WAITING_HTML, {
 
 export default {
   async fetch(request) {
+    // Route is `/*` so URLs with query strings (e.g. `/?mode=translation&lang=en`)
+    // also hit the Worker — Cloudflare route patterns can't match "root with any
+    // query string" directly. Non-root paths pass through unchanged; `/api/*` is
+    // additionally exempted from Workers via a Dashboard-configured route (see
+    // worker/README.md) so polling traffic doesn't consume free-tier invocations.
+    if (new URL(request.url).pathname !== '/') return fetch(request);
     try {
       const resp = await fetch(request);
       if (resp.status >= 500) return waitingResponse();
