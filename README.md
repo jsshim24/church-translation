@@ -84,7 +84,7 @@ Open in any browser or ProPresenter Web Fill:
 | `http://localhost:8080/?mode=translation&lang=es` | Spanish translations only |
 | `http://localhost:8080/?display=paragraph` | Paragraph style (for ProPresenter) |
 | `http://localhost:8080/?mode=translation&lang=en&display=paragraph` | English translations, paragraph style |
-| `http://localhost:8080/?mode=translation&lang=en&display=paragraph&fontSize=98&fontWeight=500&lineSpacing=1.3&bgColor=transparent&hideStatus=1` | English translations default for RCC Sanctuary TV display (ProPresenter web fill — transparent overlay, no status indicator) |
+| `http://localhost:8080/?mode=translation&lang=en&display=paragraph&fontSize=96&fontWeight=500&lineSpacing=1.3&bgColor=transparent&hideStatus=1` | English translations default for RCC Sanctuary TV display (ProPresenter web fill — transparent overlay, no status indicator) |
 | `http://localhost:8080/?mode=transcription&lang=ko` | Only Korean transcription segments (explicit filter on the transcription stream) |
 
 ### Query Parameters
