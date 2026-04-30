@@ -156,7 +156,7 @@ When the tunnel has no origin (i.e. no device is running `soniox_claude.py`), vi
 
 The codebase splits into a shared shell plus per-backend modules:
 
-- **`soniox_claude.py`** — shared infrastructure: audio capture, web caption server, Cloudflare tunnel, prompt-building scaffolding, the LLM-agnostic `TranslationWorker` (queue/`[SKIP]`/rolling context), orchestration, and CLI. It loads the requested transcription and translation modules lazily via `importlib`, so a deployment using only e.g. `azure` + `gemini` backends would not pull in `websockets` or `anthropic`.
+- **`main.py`** — shared infrastructure: audio capture, web caption server, Cloudflare tunnel, prompt-building scaffolding, the LLM-agnostic `TranslationWorker` (queue/`[SKIP]`/rolling context), orchestration, and CLI. It loads the requested transcription and translation modules lazily via `importlib`, so a deployment using only e.g. `azure` + `gemini` backends would not pull in `websockets` or `anthropic`.
 - **`transcribe_soniox.py`** — Soniox transcription backend: WebSocket session, audio pump, recv/gating loop, term lists, and the `[Transcription]` print. Imports `websockets`.
 - **`translate_claude.py`** — Claude translation backend: per-target system prompt, ephemeral cache eligibility check, cache warmup, keepalive thread, and the `messages.create` translation call. Imports `anthropic`.
 
