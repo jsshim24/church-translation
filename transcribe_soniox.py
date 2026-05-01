@@ -5,7 +5,7 @@ from typing import Callable, Optional
 from websockets import ConnectionClosedOK
 from websockets.sync.client import connect
 
-from soniox_claude import SAMPLE_RATE, CHUNK_FRAMES, SOURCE_LANGS, iter_audio_chunks
+from main import SAMPLE_RATE, CHUNK_FRAMES, SOURCE_LANGS, iter_audio_chunks
 
 
 # ── Soniox constants ──────────────────────────────────────────────────────────

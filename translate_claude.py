@@ -5,7 +5,7 @@ from typing import Optional, Union
 
 import anthropic
 
-from soniox_claude import OUTLINE_WRAPPER, build_prompt
+from main import OUTLINE_WRAPPER, build_prompt
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
