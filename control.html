@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RC Translation · Volunteer Control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #161a20;
+    --surface2: #1e232b;
+    --border: rgba(255,255,255,0.08);
+    --border-active: rgba(255,255,255,0.18);
+    --text: #f0f2f5;
+    --muted: #7a8494;
+    --accent: #4f8ef7;
+    --accent-dim: rgba(79,142,247,0.12);
+    --green: #3ecf8e;
+    --green-dim: rgba(62,207,142,0.12);
+    --red: #f75f5f;
+    --red-dim: rgba(247,95,95,0.12);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 24px 80px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .logo-mark {
+    width: 48px;
+    height: 48px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(79,142,247,0.3);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 22px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .panel {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* Language grid */
+  .lang-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .lang-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .lang-btn:hover {
+    border-color: var(--border-active);
+    background: #232830;
+  }
+
+  .lang-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .lang-btn .flag {
+    font-size: 20px;
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .lang-btn .name {
+    font-size: 14px;
+    font-weight: 500;
+    display: block;
+  }
+
+  .lang-btn .desc {
+    font-size: 12px;
+    color: var(--muted);
+    display: block;
+    margin-top: 2px;
+  }
+
+  .lang-btn.active .desc {
+    color: rgba(79,142,247,0.7);
+  }
+
+  /* Target language checkboxes */
+  .target-grid {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .target-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    user-select: none;
+  }
+
+  .target-chip:hover {
+    border-color: var(--border-active);
+  }
+
+  .target-chip.active {
+    border-color: var(--green);
+    background: var(--green-dim);
+    color: var(--green);
+  }
+
+  .target-chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border-active);
+    transition: background 0.15s;
+  }
+
+  .target-chip.active .dot {
+    background: var(--green);
+  }
+
+  /* Device selector */
+  .device-select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8494' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+
+  .device-select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .device-refresh {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 16px;
+    transition: all 0.15s;
+    margin-left: 10px;
+  }
+
+  .device-refresh:hover {
+    border-color: var(--border-active);
+    color: var(--text);
+  }
+
+  .device-row {
+    display: flex;
+    align-items: center;
+  }
+
+  .device-row .device-select {
+    flex: 1;
+  }
+
+  /* Outline input */
+  .outline-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    resize: none;
+    min-height: 80px;
+  }
+
+  .outline-input:focus {
+    outline: none;
+    border-color: var(--border-active);
+  }
+
+  .outline-input::placeholder {
+    color: var(--muted);
+  }
+
+  /* Status bar */
+  .status-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+
+  .status-dot.ready { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .status-dot.running { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .status-dot.error { background: var(--red); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .status-text {
+    flex: 1;
+    color: var(--muted);
+  }
+
+  .status-text.running { color: var(--green); }
+  .status-text.error { color: var(--red); }
+
+  .status-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    display: none;
+  }
+
+  /* Start/Stop button */
+  .btn-main {
+    width: 100%;
+    max-width: 560px;
+    padding: 18px;
+    border-radius: 16px;
+    font-size: 17px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    letter-spacing: -0.2px;
+  }
+
+  .btn-main.start {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-main.start:hover:not(:disabled) {
+    background: #6fa3f9;
+    transform: translateY(-1px);
+  }
+
+  .btn-main.stop {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid rgba(247,95,95,0.3);
+  }
+
+  .btn-main.stop:hover {
+    background: rgba(247,95,95,0.2);
+  }
+
+  .btn-main:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Live preview */
+  .preview-box {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    min-height: 80px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    font-style: italic;
+    color: var(--muted);
+    max-height: 160px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .preview-box::-webkit-scrollbar { display: none; }
+
+  .preview-line {
+    padding: 3px 0;
+    font-style: normal;
+  }
+
+  .preview-line .lang-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    margin-right: 6px;
+    font-style: normal;
+  }
+
+  .preview-line.transcription .lang-tag { color: var(--amber); }
+
+  /* Links section */
+  .links-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .link-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-decoration: none;
+    color: var(--text);
+    transition: all 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .link-card:hover {
+    border-color: var(--border-active);
+    background: #232830;
+  }
+
+  .link-card .link-icon {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .link-card .link-name {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .link-card .link-url {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* Command preview */
+  .cmd-preview {
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    word-break: break-all;
+  }
+
+  .cmd-preview .cmd-part { color: var(--accent); }
+  .cmd-preview .cmd-arg { color: var(--text); }
+
+  /* Section title */
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 18px 0;
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .toggle-label {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  .toggle-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    top: 3px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: all 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider {
+    background: var(--green-dim);
+    border-color: var(--green);
+  }
+
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(20px);
+    background: var(--green);
+  }
+
+  /* Port section */
+  .port-input {
+    width: 100px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    text-align: right;
+  }
+
+  .port-input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .error-banner {
+    background: var(--red-dim);
+    border: 1px solid rgba(247,95,95,0.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--red);
+    display: none;
+  }
+
+  .btn-shutdown {
+    width: 100%;
+    max-width: 560px;
+    padding: 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: 1px solid rgba(247,95,95,0.2);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s ease;
+    letter-spacing: -0.1px;
+    display: none;
+  }
+
+  .btn-shutdown:hover {
+    background: var(--red-dim);
+    color: var(--red);
+    border-color: rgba(247,95,95,0.4);
+  }
+
+  /* Shutdown confirm dialog */
+  .shutdown-dialog {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    display: none;
+  }
+
+  .shutdown-dialog-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    max-width: 360px;
+    width: 90%;
+    text-align: center;
+  }
+
+  .shutdown-dialog-box .icon { font-size: 32px; margin-bottom: 12px; }
+  .shutdown-dialog-box h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .shutdown-dialog-box p { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+
+  .shutdown-dialog-btns { display: flex; gap: 10px; }
+  .shutdown-dialog-btns button {
+    flex: 1;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+  .btn-cancel-shutdown { background: var(--surface2); color: var(--text); }
+  .btn-cancel-shutdown:hover { background: #232830; }
+  .btn-confirm-shutdown { background: var(--red); color: #fff; }
+  .btn-confirm-shutdown:hover { background: #f96f6f; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">🎙</div>
+  <h1>Live Translation</h1>
+  <p class="subtitle">Volunteer control panel · RC Church</p>
+</header>
+
+<div class="panel">
+
+  <!-- Status -->
+  <div class="status-bar" id="statusBar">
+    <div class="status-dot" id="statusDot"></div>
+    <span class="status-text" id="statusText">Select settings below to get started</span>
+    <span class="status-time" id="statusTime">00:00</span>
+  </div>
+
+  <!-- Error banner -->
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- Source language -->
+  <div class="card">
+    <div class="card-label">Speaker's language</div>
+    <div class="lang-grid">
+      <button class="lang-btn active" data-source="ko" onclick="selectSource(this)">
+        <span class="flag">🇰🇷</span>
+        <span class="name">Korean</span>
+        <span class="desc">Korean + English mix</span>
+      </button>
+      <button class="lang-btn" data-source="en" onclick="selectSource(this)">
+        <span class="flag">🇺🇸</span>
+        <span class="name">English</span>
+        <span class="desc">English only</span>
+      </button>
+      <button class="lang-btn" data-source="es" onclick="selectSource(this)">
+        <span class="flag">🇪🇸</span>
+        <span class="name">Spanish</span>
+        <span class="desc">Spanish + English mix</span>
+      </button>
+      <button class="lang-btn" data-source="multi" onclick="selectSource(this)">
+        <span class="flag">🌐</span>
+        <span class="name">Multi</span>
+        <span class="desc">Korean + English + Spanish</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Target languages -->
+  <div class="card" id="targetCard">
+    <div class="card-label">Translate into</div>
+    <div class="target-grid" id="targetGrid">
+      <label class="target-chip active" data-lang="en">
+        <input type="checkbox" checked style="display:none" onchange="updateTargets()">
+        <div class="dot"></div>
+        English
+      </label>
+      <label class="target-chip" data-lang="ko">
+        <input type="checkbox" style="display:none" onchange="updateTargets()">
+        <div class="dot"></div>
+        Korean
+      </label>
+      <label class="target-chip" data-lang="es">
+        <input type="checkbox" style="display:none" onchange="updateTargets()">
+        <div class="dot"></div>
+        Spanish
+      </label>
+    </div>
+    <div id="targetError" style="font-size:12px;color:var(--red);margin-top:10px;display:none">
+      Select at least one target language
+    </div>
+  </div>
+
+  <!-- Audio device -->
+  <div class="card">
+    <div class="card-label">Audio input</div>
+    <div class="device-row">
+      <select class="device-select" id="deviceSelect">
+        <option value="">— select audio input —</option>
+      </select>
+      <button class="device-refresh" onclick="loadDevices()" title="Refresh devices">↺</button>
+    </div>
+    <div style="margin-top:10px;font-size:12px;color:var(--muted)">
+      Select <strong style="color:var(--text)">BlackHole 2ch</strong> to capture soundboard audio, or your Mac's microphone for testing.
+    </div>
+  </div>
+
+  <!-- Advanced options (collapsed) -->
+  <div class="card" id="advancedCard">
+    <div class="toggle-row" style="cursor:pointer" onclick="toggleAdvanced()">
+      <div>
+        <div class="toggle-label" style="font-weight:500">Advanced options</div>
+        <div class="toggle-sub">Tunnel, port, sermon outline</div>
+      </div>
+      <span id="advArrow" style="color:var(--muted);font-size:18px;transition:transform 0.2s">›</span>
+    </div>
+    <div id="advancedBody" style="display:none">
+      <div class="divider"></div>
+
+      <div class="toggle-row" style="margin-bottom:16px">
+        <div>
+          <div class="toggle-label">Cloudflare tunnel</div>
+          <div class="toggle-sub">Enables phone access via live.rctranslation.org</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="tunnelToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" style="margin-bottom:16px">
+        <div>
+          <div class="toggle-label">Web port</div>
+          <div class="toggle-sub">Caption server port</div>
+        </div>
+        <input type="number" class="port-input" id="portInput" value="8080" min="1024" max="65535">
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-title">Sermon outline (optional)</div>
+      <textarea class="outline-input" id="outlineText" placeholder="Paste sermon outline here for better translation accuracy…"></textarea>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">
+        Helps Claude stay on topic. Does not restrict translation — spoken words always take priority.
+      </div>
+    </div>
+  </div>
+
+  <!-- Command preview -->
+  <div id="cmdPreviewWrap">
+    <div class="section-title" style="margin-bottom:8px">Command preview</div>
+    <div class="cmd-preview" id="cmdPreview">
+      <span class="cmd-part">python</span> <span class="cmd-arg">main.py</span>
+    </div>
+  </div>
+
+  <!-- Start button -->
+  <button class="btn-main start" id="mainBtn" onclick="toggleSession()">
+    Start Translation
+  </button>
+
+  <!-- Live preview (shown when running) -->
+  <div class="card" id="previewCard" style="display:none">
+    <div class="card-label">Live preview</div>
+    <div class="preview-box" id="previewBox">
+      <span style="color:var(--muted);font-style:italic;font-size:14px">Waiting for speech…</span>
+    </div>
+  </div>
+
+  <!-- Links (shown when running) -->
+  <div id="linksSection" style="display:none">
+    <div class="section-title" style="margin-bottom:10px">Viewer links</div>
+    <div class="links-row" id="linksRow"></div>
+  </div>
+
+  <!-- Stop Server button (always visible after first start) -->
+  <button class="btn-shutdown" id="shutdownBtn" onclick="confirmShutdown()">
+    ⏻ &nbsp;Stop &amp; Close Server
+  </button>
+
+</div>
+
+<!-- Shutdown confirm dialog -->
+<div class="shutdown-dialog" id="shutdownDialog">
+  <div class="shutdown-dialog-box">
+    <div class="icon">⏻</div>
+    <h3>Stop the server?</h3>
+    <p>This will stop the translation session and shut down the control panel. You'll need to relaunch the app to start again.</p>
+    <div class="shutdown-dialog-btns">
+      <button class="btn-cancel-shutdown" onclick="cancelShutdown()">Cancel</button>
+      <button class="btn-confirm-shutdown" onclick="doShutdown()">Stop Server</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let source = 'ko';
+  let targets = new Set(['en']);
+  let deviceIndex = null;
+  let running = false;
+  let sessionProc = null;
+  let startTime = null;
+  let timerInterval = null;
+  let pollInterval = null;
+  let lastLineCount = 0;
+  let advancedOpen = false;
+  let outlineTempPath = null;
+
+  // ── Device loading ─────────────────────────────────────────────────────────
+  async function loadDevices() {
+    const sel = document.getElementById('deviceSelect');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    try {
+      const r = await fetch('/api/devices');
+      if (!r.ok) throw new Error();
+      const devices = await r.json();
+      sel.innerHTML = '<option value="">— select audio input —</option>';
+      devices.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d.index;
+        opt.textContent = d.name + (d.name.includes('BlackHole') ? ' ⭐' : '');
+        if (d.name.includes('BlackHole')) opt.selected = true;
+        sel.appendChild(opt);
+      });
+      deviceIndex = sel.value || null;
+      updateCmd();
+    } catch(e) {
+      sel.innerHTML = '<option value="">⚠ Could not load devices — is the server running?</option>';
+    }
+  }
+
+  document.getElementById('deviceSelect').addEventListener('change', function() {
+    deviceIndex = this.value || null;
+    updateCmd();
+  });
+
+  // ── Source selection ───────────────────────────────────────────────────────
+  function selectSource(btn) {
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    source = btn.dataset.source;
+
+    // Multi forces all targets
+    if (source === 'multi') {
+      targets = new Set(['ko', 'en', 'es']);
+      document.querySelectorAll('.target-chip').forEach(chip => {
+        chip.classList.add('active');
+        chip.querySelector('input').checked = true;
+      });
+      document.getElementById('targetCard').style.opacity = '0.5';
+      document.getElementById('targetCard').style.pointerEvents = 'none';
+    } else {
+      document.getElementById('targetCard').style.opacity = '1';
+      document.getElementById('targetCard').style.pointerEvents = 'auto';
+      // Remove source lang from targets if present
+      if (targets.has(source)) {
+        targets.delete(source);
+        const chip = document.querySelector(`.target-chip[data-lang="${source}"]`);
+        if (chip) {
+          chip.classList.remove('active');
+          chip.querySelector('input').checked = false;
+        }
+      }
+      // Default: at least one target
+      if (targets.size === 0) {
+        const fallback = source === 'en' ? 'ko' : 'en';
+        targets.add(fallback);
+        const chip = document.querySelector(`.target-chip[data-lang="${fallback}"]`);
+        if (chip) {
+          chip.classList.add('active');
+          chip.querySelector('input').checked = true;
+        }
+      }
+    }
+    updateCmd();
+  }
+
+  // ── Target chips ───────────────────────────────────────────────────────────
+  function updateTargets() {
+    targets = new Set();
+    document.querySelectorAll('.target-chip').forEach(chip => {
+      const cb = chip.querySelector('input');
+      if (cb.checked) {
+        chip.classList.add('active');
+        targets.add(chip.dataset.lang);
+      } else {
+        chip.classList.remove('active');
+      }
+    });
+    document.getElementById('targetError').style.display = targets.size === 0 ? 'block' : 'none';
+    updateCmd();
+  }
+
+  document.querySelectorAll('.target-chip').forEach(chip => {
+    chip.addEventListener('click', function() {
+      if (source === 'multi') return;
+      const cb = this.querySelector('input');
+      // Prevent deselecting if it's the last one
+      if (cb.checked && targets.size === 1) return;
+      cb.checked = !cb.checked;
+      updateTargets();
+    });
+  });
+
+  // ── Command builder ────────────────────────────────────────────────────────
+  function updateCmd() {
+    const port = document.getElementById('portInput').value || '8080';
+    const tunnel = document.getElementById('tunnelToggle').checked;
+    const targetStr = [...targets].join(',');
+    let cmd = `<span class="cmd-part">python</span> <span class="cmd-arg">main.py</span>`;
+    cmd += ` --source ${source}`;
+    if (targetStr) cmd += ` --target ${targetStr}`;
+    if (deviceIndex) cmd += ` --device ${deviceIndex}`;
+    cmd += ` --port ${port}`;
+    if (!tunnel) cmd += ` --no-tunnel`;
+    if (outlineTempPath) cmd += ` --outline ${outlineTempPath}`;
+    document.getElementById('cmdPreview').innerHTML = cmd;
+  }
+
+  document.getElementById('portInput').addEventListener('input', updateCmd);
+  document.getElementById('tunnelToggle').addEventListener('change', updateCmd);
+
+  // ── Advanced toggle ────────────────────────────────────────────────────────
+  function toggleAdvanced() {
+    advancedOpen = !advancedOpen;
+    document.getElementById('advancedBody').style.display = advancedOpen ? 'block' : 'none';
+    document.getElementById('advArrow').style.transform = advancedOpen ? 'rotate(90deg)' : '';
+  }
+
+  // ── Status helpers ─────────────────────────────────────────────────────────
+  function setStatus(state, message) {
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    dot.className = 'status-dot ' + state;
+    text.className = 'status-text ' + state;
+    text.textContent = message;
+  }
+
+  function showError(msg) {
+    const b = document.getElementById('errorBanner');
+    b.textContent = '⚠ ' + msg;
+    b.style.display = 'block';
+    setTimeout(() => b.style.display = 'none', 6000);
+  }
+
+  // ── Timer ──────────────────────────────────────────────────────────────────
+  function startTimer() {
+    startTime = Date.now();
+    const el = document.getElementById('statusTime');
+    el.style.display = 'block';
+    timerInterval = setInterval(() => {
+      const s = Math.floor((Date.now() - startTime) / 1000);
+      const m = Math.floor(s / 60).toString().padStart(2,'0');
+      const sec = (s % 60).toString().padStart(2,'0');
+      el.textContent = m + ':' + sec;
+    }, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+    document.getElementById('statusTime').style.display = 'none';
+  }
+
+  // ── Live preview poll ──────────────────────────────────────────────────────
+  function startPoll() {
+    lastLineCount = 0;
+    pollInterval = setInterval(async () => {
+      try {
+        const r = await fetch('/api/latest', { cache: 'no-store' });
+        if (!r.ok) return;
+        const data = await r.json();
+        const newLines = data.lines.slice(lastLineCount);
+        lastLineCount = data.lines.length;
+        if (newLines.length === 0) return;
+        const box = document.getElementById('previewBox');
+        const wasEmpty = box.querySelector('span');
+        if (wasEmpty) box.innerHTML = '';
+        newLines.forEach(line => {
+          const div = document.createElement('div');
+          div.className = 'preview-line ' + line.kind;
+          div.innerHTML = `<span class="lang-tag">[${line.lang}]</span>${line.text}`;
+          box.appendChild(div);
+        });
+        // Keep last 12 lines
+        const all = box.querySelectorAll('.preview-line');
+        if (all.length > 12) {
+          for (let i = 0; i < all.length - 12; i++) all[i].remove();
+        }
+        box.scrollTop = box.scrollHeight;
+      } catch(e) {}
+    }, 400);
+  }
+
+  function stopPoll() {
+    clearInterval(pollInterval);
+  }
+
+  // ── Build viewer links ─────────────────────────────────────────────────────
+  function buildLinks() {
+    const port = document.getElementById('portInput').value || '8080';
+    const tunnel = document.getElementById('tunnelToggle').checked;
+    const localBase = `http://localhost:${port}`;
+    const remoteBase = 'https://live.rctranslation.org';
+    const links = [];
+
+    // Multi-language combined view (only when 2+ targets)
+    if (targets.size >= 2) {
+      const langsStr = [...targets].join(',');
+      links.push({
+        icon: '🌐',
+        name: 'All languages · Combined',
+        url: `${localBase}/?mode=translation&langs=${langsStr}&fontSize=48&bgColor=%23000&padding=40`,
+        sub: 'Side-by-side view',
+      });
+    }
+
+    [...targets].forEach(lang => {
+      const langName = {en:'English', ko:'Korean', es:'Spanish'}[lang];
+      const flags = {en:'🇺🇸', ko:'🇰🇷', es:'🇪🇸'};
+      links.push({
+        icon: flags[lang],
+        name: `${langName} · TV`,
+        url: `${localBase}/?mode=translation&lang=${lang}&fontSize=72&bgColor=%23000&padding=40`,
+        sub: 'Open on TV browser',
+      });
+      if (tunnel) {
+        links.push({
+          icon: '📱',
+          name: `${langName} · Phones`,
+          url: `${remoteBase}/?mode=translation&lang=${lang}&fontSize=28&bgColor=%23000`,
+          sub: 'Share this link',
+        });
+      }
+    });
+
+    const row = document.getElementById('linksRow');
+    row.innerHTML = '';
+    row.style.gridTemplateColumns = links.length <= 2 ? '1fr 1fr' : 'repeat(auto-fill, minmax(200px, 1fr))';
+    links.forEach(l => {
+      const a = document.createElement('a');
+      a.className = 'link-card';
+      a.href = l.url;
+      a.target = '_blank';
+      a.innerHTML = `<span class="link-icon">${l.icon}</span><span class="link-name">${l.name}</span><span class="link-url">${l.sub}</span>`;
+      row.appendChild(a);
+    });
+  }
+
+  // ── Main toggle ────────────────────────────────────────────────────────────
+  async function toggleSession() {
+    if (running) {
+      // Stop
+      try {
+        await fetch('/api/stop', { method: 'POST' });
+      } catch(e) {}
+      stopTimer();
+      stopPoll();
+      running = false;
+      document.getElementById('mainBtn').className = 'btn-main start';
+      document.getElementById('mainBtn').textContent = 'Start Translation';
+      document.getElementById('previewCard').style.display = 'none';
+      document.getElementById('linksSection').style.display = 'none';
+      setStatus('ready', 'Session stopped');
+      return;
+    }
+
+    // Validate
+    if (!deviceIndex) { showError('Please select an audio input device.'); return; }
+    if (targets.size === 0) { showError('Select at least one target language.'); return; }
+
+    // Save outline if provided
+    const outline = document.getElementById('outlineText').value.trim();
+
+    const payload = {
+      source,
+      targets: [...targets],
+      device: parseInt(deviceIndex),
+      port: parseInt(document.getElementById('portInput').value) || 8080,
+      tunnel: document.getElementById('tunnelToggle').checked,
+      outline: outline || null,
+    };
+
+    setStatus('ready', 'Starting…');
+    document.getElementById('mainBtn').disabled = true;
+
+    try {
+      const r = await fetch('/api/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const res = await r.json();
+      if (!r.ok || res.error) throw new Error(res.error || 'Failed to start');
+
+      running = true;
+      document.getElementById('mainBtn').disabled = false;
+      document.getElementById('mainBtn').className = 'btn-main stop';
+      document.getElementById('mainBtn').textContent = 'Stop Translation';
+      document.getElementById('previewCard').style.display = 'block';
+      document.getElementById('shutdownBtn').style.display = 'block';
+      document.getElementById('previewBox').innerHTML = '<span style="color:var(--muted);font-style:italic;font-size:14px">Waiting for speech…</span>';
+      document.getElementById('linksSection').style.display = 'block';
+      buildLinks();
+      startTimer();
+      startPoll();
+      const targetNames = [...targets].map(t => ({en:'English',ko:'Korean',es:'Spanish'}[t])).join(' + ');
+      setStatus('running', `Live · ${({ko:'Korean',en:'English',es:'Spanish',multi:'Multi'}[source])} → ${targetNames}`);
+    } catch(e) {
+      document.getElementById('mainBtn').disabled = false;
+      setStatus('error', 'Failed to start — check terminal for errors');
+      showError(e.message);
+    }
+  }
+
+  // ── Shutdown ───────────────────────────────────────────────────────────────
+  function confirmShutdown() {
+    document.getElementById('shutdownDialog').style.display = 'flex';
+  }
+
+  function cancelShutdown() {
+    document.getElementById('shutdownDialog').style.display = 'none';
+  }
+
+  async function doShutdown() {
+    document.getElementById('shutdownDialog').style.display = 'none';
+    const btn = document.getElementById('shutdownBtn');
+    btn.textContent = 'Stopping…';
+    btn.disabled = true;
+    try {
+      await fetch('/api/shutdown', { method: 'POST' });
+    } catch(e) {
+      // Expected — server kills itself so connection drops
+    }
+    // Show a clean "closed" state
+    document.body.innerHTML = '<div style="height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:system-ui;color:#7a8494;background:#0d0f12">' +
+      '<div style="font-size:48px">✓</div>' +
+      '<div style="font-size:18px;color:#f0f2f5">Server stopped</div>' +
+      '<div style="font-size:14px">You can close this tab and quit the app.</div>' +
+      '</div>';
+  }
+
+  // ── Heartbeat — tell server this tab is alive ──────────────────────────────
+  function sendHeartbeat() {
+    fetch('/api/heartbeat', { cache: 'no-store' }).catch(() => {});
+  }
+  sendHeartbeat();
+  setInterval(sendHeartbeat, 4000);
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  loadDevices();
+  updateCmd();
+  setStatus('ready', 'Ready · select settings below');
+</script>
+</body>
+</html>

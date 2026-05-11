@@ -31,19 +31,19 @@ cp .env.example .env   # then edit .env and fill in SONIOX_API_KEY and ANTHROPIC
 
 ```bash
 # Korean (mixed with English) → English  (default)
-python soniox_claude.py
+python main.py
 
 # English → Korean
-python soniox_claude.py --source en --target ko
+python main.py --source en --target ko
 
 # Korean → English AND Spanish (parallel translation streams on separate URLs)
-python soniox_claude.py --source ko --target en,es
+python main.py --source ko --target en,es
 
 # Spanish (mixed with English) → English
-python soniox_claude.py --source es --target en
+python main.py --source es --target en
 
 # Multilingual (ko + en + es speech) → all three translation streams
-python soniox_claude.py --source multi
+python main.py --source multi
 ```
 
 You'll be prompted to select an audio input device, then transcription and translation begin immediately. A web caption server starts on port 8080 by default.
@@ -55,7 +55,7 @@ You'll be prompted to select an audio input device, then transcription and trans
 If you have the sermon outline ahead of time, pass it with `--outline` to give Claude topical and structural context. This also activates Anthropic prompt caching, making every subsequent translation call cheaper and slightly faster.
 
 ```bash
-python soniox_claude.py --outline path/to/sermon.txt
+python main.py --outline path/to/sermon.txt
 ```
 
 - The file must be UTF-8 plain text. Any `.txt` with bullet points, verse references, or prose works. For a multilingual sermon, use a single multilingual outline; it is attached verbatim to every target worker's system prompt.
@@ -65,11 +65,21 @@ python soniox_claude.py --outline path/to/sermon.txt
 - The outline is used as **context only** — Claude is instructed to translate what is actually said, even when the speaker rhetorically diverges from the outline.
 
 ### Application
-Use the below script (audio device 4, default CLI flags otherwise) with Automator (Application, Run Shell Script) for one click execution (.app file, pinnable to dock)
 
-`osascript -e "tell application \"Terminal\" to do script \"cd $HOME/Documents/church-translation && source venv/bin/activate && python soniox_claude.py --device 4\""`
+The recommended way to run this is via the included Automator app (`launcher.sh`), which:
 
-Duplicate and edit the `.app` for other source/target combinations (e.g. `--source es --target en` for a Spanish service).
+1. Launches LadioCast for audio routing
+2. Starts `control_server.py` (the volunteer control panel) in the background
+3. Opens `http://localhost:9090` in Chrome
+4. Exits cleanly when the browser tab is closed or the volunteer clicks **Stop & Close Server**
+
+To set it up:
+1. Open Automator → New Document → **Application**
+2. Add a **Run Shell Script** action (Shell: `/bin/bash`, Pass input: as arguments)
+3. Paste the contents of `launcher.sh`
+4. Save as an `.app` and pin it to the Dock
+
+From the control panel at `http://localhost:9090`, volunteers can select the audio device, source/target languages, optionally upload a sermon outline, and start/stop the translation session.
 
 ## Web Display
 
@@ -124,8 +134,8 @@ Alternatively, regenerate the credentials through the Cloudflare dashboard (Netw
 The tunnel starts automatically when you run the script — `--tunnel church-live` is the default. Pass `--no-tunnel` to skip it for local-only work:
 
 ```bash
-python soniox_claude.py              # tunnel runs automatically
-python soniox_claude.py --no-tunnel  # localhost only
+python main.py              # tunnel runs automatically
+python main.py --no-tunnel  # localhost only
 ```
 
 Viewers can access:
@@ -136,7 +146,7 @@ Viewers can access:
 
 ### Waiting page
 
-When the tunnel has no origin (i.e. no device is running `soniox_claude.py`), visitors to `live.rctranslation.org` see Cloudflare's default 530 error. To replace that with a branded "Waiting for transcription…" page that auto-refreshes into captions when the tunnel comes back online, deploy the Cloudflare Worker in `worker/`. See [`worker/README.md`](worker/README.md) for the one-time deploy.
+When the tunnel has no origin (i.e. no device is running `main.py`), visitors to `live.rctranslation.org` see Cloudflare's default 530 error. To replace that with a branded "Waiting for transcription…" page that auto-refreshes into captions when the tunnel comes back online, deploy the Cloudflare Worker in `worker/`. See [`worker/README.md`](worker/README.md) for the one-time deploy.
 
 ## CLI Options
 
@@ -159,6 +169,9 @@ The codebase splits into a shared shell plus per-backend modules:
 - **`main.py`** — shared infrastructure: audio capture, web caption server, Cloudflare tunnel, prompt-building scaffolding, the LLM-agnostic `TranslationWorker` (queue/`[SKIP]`/rolling context), orchestration, and CLI. It loads the requested transcription and translation modules lazily via `importlib`, so a deployment using only e.g. `azure` + `gemini` backends would not pull in `websockets` or `anthropic`.
 - **`transcribe_soniox.py`** — Soniox transcription backend: WebSocket session, audio pump, recv/gating loop, term lists, and the `[Transcription]` print. Imports `websockets`.
 - **`translate_claude.py`** — Claude translation backend: per-target system prompt, ephemeral cache eligibility check, cache warmup, keepalive thread, and the `messages.create` translation call. Imports `anthropic`.
+- **`control_server.py`** — Volunteer control panel server (`http://localhost:9090`). Serves `control.html`, manages the `main.py` subprocess, and shuts itself down when the browser tab closes.
+- **`control.html`** — Volunteer UI: device selection, source/target language picker, optional sermon outline upload, start/stop controls, and live caption viewer links.
+- **`launcher.sh`** — Automator shell script: starts LadioCast, launches `control_server.py`, opens Chrome, and waits — exiting cleanly when the server shuts down.
 
 Alternative backends drop in alongside without modifying the main file beyond extending the `--transcriber` / `--translator` choice lists. They must implement these contracts:
 

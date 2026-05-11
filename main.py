@@ -197,48 +197,160 @@ CAPTION_HTML = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   html, body {
-    width: 100%; height: 100%;
+    width: 100%;
+    height: 100%;
     background: transparent;
     overflow: hidden;
   }
+
   #container {
-    width: 100%; height: 100%;
+    width: 100%;
+    height: 100%;
     overflow-y: auto;
     scroll-behavior: smooth;
     scrollbar-width: none;
     -ms-overflow-style: none;
   }
-  #container::-webkit-scrollbar { display: none; }
+
+  #container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .multi-line-block {
+    animation: fadeIn 0.25s ease-out;
+    margin-bottom: 0.45em;
+    opacity: 0.45;
+    transition: opacity 0.4s ease;
+  }
+
+  .multi-line-block:last-child {
+    opacity: 1;
+  }
+
+  .lang-line {
+    display: block;
+    width: 100%;
+  }
+
   .line-item {
     animation: fadeIn 0.25s ease-out;
+    opacity: 0.45;
+    transition: opacity 0.4s ease;
   }
+
+  .line-item:last-child {
+    opacity: 1;
+  }
+
   .span-item {
-    /* no animation — instant append for paragraph mode */
+    /* paragraph mode */
   }
+
   @keyframes fadeIn {
     from { opacity: 0; }
     to   { opacity: 1; }
   }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  #waiting-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.82);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    z-index: 999;
+    transition: opacity 0.4s ease;
+  }
+
+  #waiting-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #waiting-overlay .spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  #waiting-overlay .msg {
+    color: rgba(255,255,255,0.85);
+    font-family: system-ui, sans-serif;
+    font-size: 18px;
+  }
+
+  #waiting-overlay .dismiss {
+    color: rgba(255,255,255,0.35);
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 18px;
+    border-radius: 20px;
+    background: none;
+    transition: all 0.2s;
+  }
+
+  #waiting-overlay .dismiss:hover {
+    color: rgba(255,255,255,0.7);
+    border-color: rgba(255,255,255,0.35);
+  }
 </style>
 </head><body>
+
+<div id="waiting-overlay">
+  <div class="spinner"></div>
+  <div class="msg">Waiting for transcription…</div>
+  <button class="dismiss" onclick="dismissOverlay()">Dismiss</button>
+</div>
+
 <div id="container">
   <div id="lines"></div>
 </div>
+
 <script>
 (function() {
   const params = new URLSearchParams(window.location.search);
 
-  // Content filtering.
-  // Default target lang is injected server-side from the first --target.
-  // Default mode is transcription.
-  // For transcription mode, missing `lang` means "no filter — show all langs".
-  // For translation mode, missing `lang` falls back to the default target.
+  // Modes
   const DEFAULT_TARGET_LANG = "__DEFAULT_TARGET_LANG__";
-  const mode = params.get('mode') || 'transcription';
-  const explicitLang = params.get('lang');
-  const lang = explicitLang || (mode === 'translation' ? DEFAULT_TARGET_LANG : null);
+  const mode = params.get('mode') || 'translation';
   const display = params.get('display') || 'line';
+
+  // Multi-language support:
+  // ?langs=en,ko,es
+  // Each language renders on its own line inside the same caption block.
+  //
+  // Backwards compatibility:
+  // ?lang=en still works.
+  const langsParam = params.get('langs');
+  const singleLang = params.get('lang');
+
+  let langs = [];
+
+  if (langsParam) {
+    langs = langsParam
+      .split(',')
+      .map(x => x.trim())
+      .filter(Boolean);
+  } else if (singleLang) {
+    langs = [singleLang];
+  } else if (mode === 'translation') {
+    langs = [DEFAULT_TARGET_LANG];
+  }
+
+  const multiLangMode = langs.length > 1;
 
   // Typography
   const fontSize   = params.get('fontSize')   || '48';
@@ -252,8 +364,8 @@ CAPTION_HTML = r"""<!DOCTYPE html>
 
   // Layout
   const bgColor  = params.get('bgColor') || '#000';
-  const showStatus = params.get('hideStatus') !== '1';
   const padding  = params.get('padding') || '20';
+
   const maxLines = Math.min(
     params.get('maxLines') ? parseInt(params.get('maxLines')) : 0,
     200
@@ -263,13 +375,17 @@ CAPTION_HTML = r"""<!DOCTYPE html>
   if (googleFont) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family='
-              + encodeURIComponent(googleFont) + '&display=swap';
+    link.href =
+      'https://fonts.googleapis.com/css2?family='
+      + encodeURIComponent(googleFont)
+      + '&display=swap';
+
     document.head.appendChild(link);
   }
 
   const container = document.getElementById('container');
   const linesDiv  = document.getElementById('lines');
+  const overlay   = document.getElementById('waiting-overlay');
 
   // Apply styles
   document.body.style.background = bgColor;
@@ -278,6 +394,7 @@ CAPTION_HTML = r"""<!DOCTYPE html>
   const resolvedFamily = googleFont
     ? '"' + googleFont.replace(/\+/g, ' ') + '", ' + fontFamily
     : fontFamily;
+
   linesDiv.style.cssText = [
     'font-size:'    + fontSize + 'px',
     'font-family:'  + resolvedFamily,
@@ -286,71 +403,199 @@ CAPTION_HTML = r"""<!DOCTYPE html>
     'line-height:'  + lineSpacing,
     'text-align:'   + textAlign,
     'text-shadow:'  + textShadow,
+    'white-space:pre-wrap'
   ].join(';');
 
   let lastCount = 0;
   let lastUpdated = 0;
+
+  let overlayDismissed = false;
+  let hasReceivedData = false;
+
   const DOM_CAP = 200;
 
   const FAST_MS = 150;
   const MAX_MS  = 1000;
   const GROWTH  = 1.5;
+
   let pollDelay = FAST_MS;
 
-  const statusEl = document.createElement('div');
-  statusEl.textContent = 'Waiting for transcription…';
-  statusEl.style.cssText = 'position:fixed;bottom:16px;right:20px;font-size:14px;opacity:0;transition:opacity 0.4s;pointer-events:none;color:#999;';
-  if (showStatus) document.body.appendChild(statusEl);
-  let failCount = 0;
-  const FAIL_THRESHOLD = 3;
+  // Multi-language grouping state
+  // Groups buffer lines until all expected langs arrive or a timeout fires,
+  // then render them in LANG_ORDER sequence.
+  const LANG_ORDER = ['ko', 'en', 'es'];  // fixed display order
+  const GROUP_WINDOW_MS = 6000;  // wait up to 6s for slow translations
+  const recentGroups = [];
+
+  function getExpectedLangs() {
+    // langs array holds the active target languages from URL params
+    return langs.length > 0
+      ? LANG_ORDER.filter(l => langs.includes(l))
+      : LANG_ORDER;
+  }
+
+  function flushGroup(group) {
+    if (group.flushed) return;
+    group.flushed = true;
+    clearTimeout(group.timer);
+    const ordered = getExpectedLangs();
+    ordered.forEach(lang => {
+      if (group.buffer[lang] !== undefined) {
+        const langLine = makeLangLine(lang, group.buffer[lang]);
+        group.el.appendChild(langLine);
+      }
+    });
+  }
+
+  function appendMultiLanguageLine(line) {
+    const now = Date.now();
+    const expected = getExpectedLangs();
+
+    // Find a non-flushed recent group that doesn't already have this lang
+    let group = null;
+    for (let i = recentGroups.length - 1; i >= 0; i--) {
+      const g = recentGroups[i];
+      if (!g.flushed && (now - g.ts) <= GROUP_WINDOW_MS && g.buffer[line.lang] === undefined) {
+        group = g;
+        break;
+      }
+    }
+
+    // Create new group if needed
+    if (!group) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'multi-line-block';
+      linesDiv.appendChild(wrapper);
+      group = { ts: now, el: wrapper, buffer: {}, flushed: false, timer: null };
+      recentGroups.push(group);
+      while (recentGroups.length > 50) recentGroups.shift();
+    }
+
+    group.buffer[line.lang] = line.text;
+
+    // Flush immediately if all expected langs are present
+    const have = expected.filter(l => group.buffer[l] !== undefined);
+    if (have.length >= expected.length) {
+      flushGroup(group);
+      return;
+    }
+
+    // Otherwise set/reset a deadline timer so we don't wait forever
+    clearTimeout(group.timer);
+    group.timer = setTimeout(() => flushGroup(group), GROUP_WINDOW_MS);
+  }
+
+  window.dismissOverlay = function() {
+    overlayDismissed = true;
+    overlay.classList.add('hidden');
+  };
+
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) {
+      window.dismissOverlay();
+    }
+  });
+
+  function scrollToBottom() {
+    requestAnimationFrame(function() {
+      container.scrollTop = container.scrollHeight;
+    });
+  }
+
+  function langAllowed(lang) {
+    if (langs.length === 0) return true;
+    return langs.includes(lang);
+  }
+
+  function makeLangLine(lang, text) {
+    const div = document.createElement('div');
+    div.className = 'lang-line';
+    div.dataset.lang = lang;
+    div.textContent = text;
+    return div;
+  }
+
+  function appendSingleLine(text) {
+    if (display === 'paragraph') {
+      const span = document.createElement('span');
+      span.className = 'span-item';
+      span.textContent = text + ' ';
+      linesDiv.appendChild(span);
+    } else {
+      const div = document.createElement('div');
+      div.className = 'line-item';
+      div.textContent = text;
+      linesDiv.appendChild(div);
+    }
+  }
+
+  function trimDom() {
+    const selector = multiLangMode
+      ? '.multi-line-block'
+      : (display === 'paragraph' ? '.span-item' : '.line-item');
+
+    const items = linesDiv.querySelectorAll(selector);
+
+    const limit = maxLines > 0 ? maxLines : DOM_CAP;
+    const toRemove = items.length - limit;
+
+    for (let i = 0; i < toRemove; i++) {
+      items[i].remove();
+    }
+  }
 
   async function poll() {
     try {
       const resp = await fetch('/api/latest');
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+      if (!resp.ok) {
+        throw new Error('HTTP ' + resp.status);
+      }
+
       const data = await resp.json();
+
       pollDelay = FAST_MS;
-      failCount = 0;
-      statusEl.style.opacity = '0';
-      if (data.updated === lastUpdated) return;
+
+      if (data.updated === lastUpdated) {
+        return;
+      }
+
       lastUpdated = data.updated;
 
-      // Filter and append only new lines
       const allLines = data.lines;
       const newLines = allLines.slice(lastCount);
+
       lastCount = allLines.length;
+
+      let appended = false;
 
       for (const line of newLines) {
         if (line.kind !== mode) continue;
-        if (lang !== null && line.lang !== lang) continue;
+        if (!langAllowed(line.lang)) continue;
 
-        if (display === 'paragraph') {
-          const span = document.createElement('span');
-          span.className = 'span-item';
-          span.textContent = line.text + ' ';
-          linesDiv.appendChild(span);
-        } else {
-          const div = document.createElement('div');
-          div.className = 'line-item';
-          div.textContent = line.text;
-          linesDiv.appendChild(div);
+        if (!overlayDismissed && !hasReceivedData) {
+          hasReceivedData = true;
+          window.dismissOverlay();
         }
+
+        if (multiLangMode) {
+          appendMultiLanguageLine(line);
+        } else {
+          appendSingleLine(line.text);
+        }
+
+        appended = true;
       }
 
-      // Trim DOM
-      const selector = display === 'paragraph' ? '.span-item' : '.line-item';
-      const items = linesDiv.querySelectorAll(selector);
-      const limit = maxLines > 0 ? maxLines : DOM_CAP;
-      const toRemove = items.length - limit;
-      for (let i = 0; i < toRemove; i++) {
-        items[i].remove();
+      trimDom();
+
+      if (appended) {
+        scrollToBottom();
       }
 
-      container.scrollTop = container.scrollHeight;
     } catch (e) {
       pollDelay = Math.min(pollDelay * GROWTH, MAX_MS);
-      failCount++;
-      if (showStatus && failCount >= FAIL_THRESHOLD) statusEl.style.opacity = '1';
+
     } finally {
       setTimeout(poll, pollDelay);
     }
