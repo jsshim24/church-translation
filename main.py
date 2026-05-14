@@ -942,8 +942,8 @@ def main():
         dev = sd.query_devices(device_index)
         print(f"Using device [{device_index}]: {dev['name']}")
     else:
-        device_index, device_name = select_audio_device()
-        print(f"Using device [{device_index}]: {device_name}")
+        device_index = None
+        print("Using system default audio input device.")
 
     if args.port > 0:
         start_caption_server(args.port)

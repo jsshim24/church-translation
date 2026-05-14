@@ -6,6 +6,7 @@
 <title>RC Translation · Volunteer Control</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
   :root {
     --bg: #0d0f12;
@@ -190,56 +191,6 @@
     background: var(--green);
   }
 
-  /* Device selector */
-  .device-select {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 16px;
-    color: var(--text);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237a8494' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    padding-right: 40px;
-  }
-
-  .device-select:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  .device-refresh {
-    background: none;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px 14px;
-    cursor: pointer;
-    color: var(--muted);
-    font-size: 16px;
-    transition: all 0.15s;
-    margin-left: 10px;
-  }
-
-  .device-refresh:hover {
-    border-color: var(--border-active);
-    color: var(--text);
-  }
-
-  .device-row {
-    display: flex;
-    align-items: center;
-  }
-
-  .device-row .device-select {
-    flex: 1;
-  }
-
   /* Outline input */
   .outline-input {
     width: 100%;
@@ -420,6 +371,59 @@
     font-family: 'DM Mono', monospace;
     font-size: 11px;
     color: var(--muted);
+  }
+
+  /* Outline file upload */
+  .outline-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .outline-file-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px dashed var(--border-active);
+    border-radius: 10px;
+    padding: 11px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 13px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    user-select: none;
+  }
+
+  .outline-file-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .outline-file-btn.has-file {
+    border-style: solid;
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-dim);
+  }
+
+  .outline-clear-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 13px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .outline-clear-btn:hover {
+    border-color: var(--red);
+    color: var(--red);
   }
 
   /* Command preview */
@@ -659,17 +663,17 @@
     <div class="card-label">Translate into</div>
     <div class="target-grid" id="targetGrid">
       <label class="target-chip active" data-lang="en">
-        <input type="checkbox" checked style="display:none" onchange="updateTargets()">
+        <input type="checkbox" checked style="display:none">
         <div class="dot"></div>
         English
       </label>
       <label class="target-chip" data-lang="ko">
-        <input type="checkbox" style="display:none" onchange="updateTargets()">
+        <input type="checkbox" style="display:none">
         <div class="dot"></div>
         Korean
       </label>
       <label class="target-chip" data-lang="es">
-        <input type="checkbox" style="display:none" onchange="updateTargets()">
+        <input type="checkbox" style="display:none">
         <div class="dot"></div>
         Spanish
       </label>
@@ -679,19 +683,6 @@
     </div>
   </div>
 
-  <!-- Audio device -->
-  <div class="card">
-    <div class="card-label">Audio input</div>
-    <div class="device-row">
-      <select class="device-select" id="deviceSelect">
-        <option value="">— select audio input —</option>
-      </select>
-      <button class="device-refresh" onclick="loadDevices()" title="Refresh devices">↺</button>
-    </div>
-    <div style="margin-top:10px;font-size:12px;color:var(--muted)">
-      Select <strong style="color:var(--text)">BlackHole 2ch</strong> to capture soundboard audio, or your Mac's microphone for testing.
-    </div>
-  </div>
 
   <!-- Advanced options (collapsed) -->
   <div class="card" id="advancedCard">
@@ -727,7 +718,22 @@
       <div class="divider"></div>
 
       <div class="section-title">Sermon outline (optional)</div>
+
+      <!-- File upload row -->
+      <div class="outline-upload-row" id="outlineUploadRow">
+        <label class="outline-file-btn" id="outlineFileLabel">
+          <input type="file" id="outlineFileInput" accept=".txt,.docx" style="display:none">
+          <span id="outlineFileIcon">📄</span>
+          <span id="outlineFileName">Upload .txt or .docx</span>
+        </label>
+        <button class="outline-clear-btn" id="outlineClearBtn" onclick="clearOutlineFile()" style="display:none" title="Remove file">✕</button>
+      </div>
+      <div id="outlineFileStatus" style="font-size:12px;color:var(--muted);margin-top:6px;display:none"></div>
+
+      <!-- Fallback textarea -->
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);margin-bottom:6px" id="outlinePasteLabel">Or paste outline text directly:</div>
       <textarea class="outline-input" id="outlineText" placeholder="Paste sermon outline here for better translation accuracy…"></textarea>
+
       <div style="font-size:12px;color:var(--muted);margin-top:8px">
         Helps Claude stay on topic. Does not restrict translation — spoken words always take priority.
       </div>
@@ -782,10 +788,83 @@
 </div>
 
 <script>
+  // ── Outline file upload ────────────────────────────────────────────────────
+  let outlineFileText = null; // text extracted from uploaded file
+
+  document.getElementById('outlineFileInput').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+
+    const label = document.getElementById('outlineFileLabel');
+    const nameEl = document.getElementById('outlineFileName');
+    const iconEl = document.getElementById('outlineFileIcon');
+    const statusEl = document.getElementById('outlineFileStatus');
+    const clearBtn = document.getElementById('outlineClearBtn');
+    const pasteLabel = document.getElementById('outlinePasteLabel');
+    const textarea = document.getElementById('outlineText');
+
+    nameEl.textContent = 'Reading…';
+    statusEl.style.display = 'none';
+
+    try {
+      let text = '';
+
+      if (file.name.endsWith('.docx')) {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        text = result.value;
+        if (result.messages && result.messages.length > 0) {
+          const warns = result.messages.filter(m => m.type === 'warning');
+          if (warns.length) {
+            statusEl.textContent = `ℹ ${warns.length} formatting element(s) skipped (images, tables) — text extracted.`;
+            statusEl.style.display = 'block';
+          }
+        }
+      } else {
+        // .txt — read as UTF-8
+        text = await file.text();
+      }
+
+      outlineFileText = text.trim();
+      // Populate textarea so volunteer can review/edit
+      textarea.value = outlineFileText;
+
+      // Update UI
+      label.classList.add('has-file');
+      iconEl.textContent = '✓';
+      nameEl.textContent = file.name;
+      clearBtn.style.display = 'block';
+      pasteLabel.textContent = 'Extracted text (editable):';
+
+    } catch(err) {
+      nameEl.textContent = 'Upload .txt or .docx';
+      iconEl.textContent = '📄';
+      label.classList.remove('has-file');
+      statusEl.textContent = '⚠ Could not read file: ' + err.message;
+      statusEl.style.color = 'var(--red)';
+      statusEl.style.display = 'block';
+      outlineFileText = null;
+    }
+
+    updateCmd();
+  });
+
+  function clearOutlineFile() {
+    outlineFileText = null;
+    document.getElementById('outlineFileInput').value = '';
+    document.getElementById('outlineFileLabel').classList.remove('has-file');
+    document.getElementById('outlineFileIcon').textContent = '📄';
+    document.getElementById('outlineFileName').textContent = 'Upload .txt or .docx';
+    document.getElementById('outlineClearBtn').style.display = 'none';
+    document.getElementById('outlineFileStatus').style.display = 'none';
+    document.getElementById('outlinePasteLabel').textContent = 'Or paste outline text directly:';
+    document.getElementById('outlineText').value = '';
+    updateCmd();
+  }
+
   // ── State ──────────────────────────────────────────────────────────────────
   let source = 'ko';
   let targets = new Set(['en']);
-  let deviceIndex = null;
   let running = false;
   let sessionProc = null;
   let startTime = null;
@@ -794,34 +873,6 @@
   let lastLineCount = 0;
   let advancedOpen = false;
   let outlineTempPath = null;
-
-  // ── Device loading ─────────────────────────────────────────────────────────
-  async function loadDevices() {
-    const sel = document.getElementById('deviceSelect');
-    sel.innerHTML = '<option value="">Loading…</option>';
-    try {
-      const r = await fetch('/api/devices');
-      if (!r.ok) throw new Error();
-      const devices = await r.json();
-      sel.innerHTML = '<option value="">— select audio input —</option>';
-      devices.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d.index;
-        opt.textContent = d.name + (d.name.includes('BlackHole') ? ' ⭐' : '');
-        if (d.name.includes('BlackHole')) opt.selected = true;
-        sel.appendChild(opt);
-      });
-      deviceIndex = sel.value || null;
-      updateCmd();
-    } catch(e) {
-      sel.innerHTML = '<option value="">⚠ Could not load devices — is the server running?</option>';
-    }
-  }
-
-  document.getElementById('deviceSelect').addEventListener('change', function() {
-    deviceIndex = this.value || null;
-    updateCmd();
-  });
 
   // ── Source selection ───────────────────────────────────────────────────────
   function selectSource(btn) {
@@ -884,9 +935,10 @@
     chip.addEventListener('click', function() {
       if (source === 'multi') return;
       const cb = this.querySelector('input');
-      // Prevent deselecting if it's the last one
-      if (cb.checked && targets.size === 1) return;
-      cb.checked = !cb.checked;
+      const willBeChecked = !cb.checked;
+      // Prevent deselecting if it's the last active one
+      if (!willBeChecked && targets.size === 1 && targets.has(this.dataset.lang)) return;
+      cb.checked = willBeChecked;
       updateTargets();
     });
   });
@@ -899,15 +951,15 @@
     let cmd = `<span class="cmd-part">python</span> <span class="cmd-arg">main.py</span>`;
     cmd += ` --source ${source}`;
     if (targetStr) cmd += ` --target ${targetStr}`;
-    if (deviceIndex) cmd += ` --device ${deviceIndex}`;
     cmd += ` --port ${port}`;
     if (!tunnel) cmd += ` --no-tunnel`;
-    if (outlineTempPath) cmd += ` --outline ${outlineTempPath}`;
+    if (document.getElementById('outlineText').value.trim()) cmd += ` --outline &lt;outline.txt&gt;`;
     document.getElementById('cmdPreview').innerHTML = cmd;
   }
 
   document.getElementById('portInput').addEventListener('input', updateCmd);
   document.getElementById('tunnelToggle').addEventListener('change', updateCmd);
+  document.getElementById('outlineText').addEventListener('input', updateCmd);
 
   // ── Advanced toggle ────────────────────────────────────────────────────────
   function toggleAdvanced() {
@@ -1054,7 +1106,6 @@
     }
 
     // Validate
-    if (!deviceIndex) { showError('Please select an audio input device.'); return; }
     if (targets.size === 0) { showError('Select at least one target language.'); return; }
 
     // Save outline if provided
@@ -1063,7 +1114,7 @@
     const payload = {
       source,
       targets: [...targets],
-      device: parseInt(deviceIndex),
+      device: null,
       port: parseInt(document.getElementById('portInput').value) || 8080,
       tunnel: document.getElementById('tunnelToggle').checked,
       outline: outline || null,
@@ -1136,7 +1187,6 @@
   setInterval(sendHeartbeat, 4000);
 
   // ── Init ───────────────────────────────────────────────────────────────────
-  loadDevices();
   updateCmd();
   setStatus('ready', 'Ready · select settings below');
 </script>

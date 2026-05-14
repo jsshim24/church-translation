@@ -54,10 +54,14 @@ def get_audio_devices() -> List[Dict]:
 
 
 def build_command(payload: dict, outline_path: Optional[str]) -> list[str]:
-    cmd = [sys.executable, "main.py"]
+    # Use the venv Python explicitly so dependencies (sounddevice, etc.) are available
+    venv_python = Path(__file__).parent / "venv" / "bin" / "python3"
+    python = str(venv_python) if venv_python.exists() else sys.executable
+    cmd = [python, "main.py"]
     cmd += ["--source", payload["source"]]
     cmd += ["--target", ",".join(payload["targets"])]
-    cmd += ["--device", str(payload["device"])]
+    if payload.get("device") is not None:
+        cmd += ["--device", str(payload["device"])]
     cmd += ["--port", str(payload.get("port", 8080))]
     if not payload.get("tunnel", True):
         cmd.append("--no-tunnel")
